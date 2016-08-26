@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;RemotePainting&apos; to &apos;DuoPaint&apos;" description="Rename resource &apos;RemotePainting&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="/RemotePainting" name="DuoPaint" stamp="1472176482602" updateReferences="true"/>
+</session>

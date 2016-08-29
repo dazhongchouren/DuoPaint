@@ -1,0 +1,219 @@
+package com.wilsongateway.DuoPaint;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Shape;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
+import java.util.ArrayList;
+
+import javax.swing.Icon;
+import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+
+public class MainFrame {
+	
+	//GUI Variables
+	private static JFrame main;
+	private static boolean paintMode;
+	private Thread serverThread;
+	private Thread clientThread;
+	
+	//Connection Variables
+	private static String ip;
+	private static int port;
+	
+	//Canvas Variables
+	private static Color currentColor = Color.BLACK;
+	private Color[] defaultColors = new Color[]{Color.BLACK, Color.BLUE, Color.RED, Color.GREEN};
+	private ArrayList<Color> customColors = new ArrayList<Color>();
+	
+	public MainFrame(){
+		main = new JFrame("DuoPaint");
+		
+		//Initiating MenuBar elements
+		JMenuBar menu = new JMenuBar();
+		main.setJMenuBar(menu);
+		JMenu fileM = new JMenu("Remote");
+		menu.add(fileM);
+		JMenuItem connectMenuItem = new JMenuItem("Connect");
+		fileM.add(connectMenuItem);
+		JMenuItem disconnectMenuItem = new JMenuItem("Disconnect");
+		fileM.add(disconnectMenuItem);
+		JMenuItem getIPMenuItem = new JMenuItem("Get IP");
+		fileM.add(getIPMenuItem);
+		JMenu canvasM = new JMenu("Canvas");
+		menu.add(canvasM);
+		JMenuItem clearMenuItem = new JMenuItem("Clear");
+		canvasM.add(clearMenuItem);
+		
+		//TODO add dividers
+		
+		JMenu colorMenu = new JMenu("Colors");
+		menu.add(colorMenu);
+		
+		//ColorBar Elements
+		for(Color c : defaultColors){
+			ColorMenuItem colorButton = new ColorMenuItem(c);
+			colorButton.setPreferredSize(new Dimension(colorMenu.getPreferredSize().width,colorMenu.getPreferredSize().width));
+			colorButton.addActionListener(new ActionListener(){
+
+				@Override
+				public void actionPerformed(ActionEvent arg0) {
+					currentColor = c;
+				}
+				
+			});
+			colorMenu.add(colorButton);
+		}
+		
+		JMenuItem addColors = new JMenuItem("+");
+		addColors.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				//TODO
+			}
+			
+		});
+		
+		//Adding ActionListeners
+		connectMenuItem.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent e){
+				setPaintMode(false);
+				String code = JOptionPane.showInputDialog(null, "Go to 'Remote > Get IP' on the host computer and enter it here.");
+				if(code != null){
+					if(code.indexOf(":") != -1){
+						ip = code.substring(0, code.indexOf(":"));
+						port = Integer.parseInt(code.substring(code.indexOf(":")+1));
+						startClientThread();
+					}
+				}
+			}
+		});
+		
+		getIPMenuItem.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent e){
+				JOptionPane.showMessageDialog(null, Server.getServerIP() + ":" + Server.getServerPort());
+			}
+		});
+		
+		disconnectMenuItem.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent e){
+				if(paintMode == false){
+					paintMode = true;
+					startServerThread();
+				}
+			}
+		});
+		
+		clearMenuItem.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent e){
+				clearCanvas();
+			}
+		});
+		
+		//Initiating canvas element
+		JPanel canvas = new JPanel();
+		canvas.setPreferredSize(new Dimension(600,600));
+		BrushListener brushListener = new BrushListener();
+		canvas.addMouseListener(brushListener);
+		canvas.addMouseMotionListener(brushListener);
+		main.add(canvas);
+		
+		//Safely closing window when JFrame is exited
+		main.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		main.addWindowListener(new WindowListener(){
+			@Override
+			public void windowClosing(WindowEvent e){
+				Server.stopServer();
+				Client.stopClient();
+				main.dispose();
+				System.exit(0);
+			}
+			@Override
+			public void windowActivated(WindowEvent arg0) {}
+			@Override
+			public void windowClosed(WindowEvent arg0) {}
+			@Override
+			public void windowDeactivated(WindowEvent arg0) {}
+			@Override
+			public void windowDeiconified(WindowEvent arg0) {}
+			@Override
+			public void windowIconified(WindowEvent arg0) {}
+			@Override
+			public void windowOpened(WindowEvent arg0) {}
+		});
+		
+		//Boiler Plate JFrame Configuration
+		main.setVisible(true);
+		main.pack();
+		main.setLocationRelativeTo(null);
+		
+		paintMode = true;
+		
+		startServerThread();
+	}
+	
+	/**
+	 * 
+	 * Takes in two sets of points and draws a line connecting them in the right color and then
+	 * calls sendStroke() for each connection.
+	 */
+	public static void paintStroke(int x, int y, int oldX, int oldY){
+		Graphics g = main.getContentPane().getGraphics();
+		g.setColor(currentColor);
+		
+		g.drawLine(x, y, oldX, oldY);
+		if(Server.getConnections() != null){
+			for(Connection c : Server.getConnections()){
+				c.sendStroke(x, y, oldX, oldY, currentColor);
+			}
+		}
+	}
+	
+	/**
+	 * Clears the canvas and calls sendClear for each connection.
+	 */
+	public static void clearCanvas(){
+		if(Server.getConnections() != null && paintMode == true){
+			for(Connection c : Server.getConnections()){
+				c.sendClear();
+			}
+		}
+		main.getContentPane().repaint();
+	}
+	
+	public void startServerThread(){
+		serverThread = new Thread(new Server());
+		serverThread.start();
+	}
+	public void startClientThread(){
+		clientThread = new Thread(new Client());
+		clientThread.start();
+	}
+	public static boolean getPaintMode(){
+		return paintMode;
+	}
+	public static void setPaintMode(boolean x){
+		paintMode = x;
+	}
+	public static void setColor(Color c){
+		currentColor = c;
+	}
+	public static String getIP(){
+		return ip;
+	}
+	public static int getPort(){
+		return port;
+	}
+	public static void main(String [] args){
+		new MainFrame();
+	}
+}

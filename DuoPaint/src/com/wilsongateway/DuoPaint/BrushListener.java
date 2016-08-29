@@ -41,6 +41,7 @@ public class BrushListener implements MouseListener, MouseMotionListener{
 		}
 	}
 
+	//Adds functionality for digitizer pens
 	@Override
 	public void mouseMoved(MouseEvent m) {
 		if(oldMouseX == -1 && MainFrame.getPaintMode() && m.getButton() == MouseEvent.BUTTON1){

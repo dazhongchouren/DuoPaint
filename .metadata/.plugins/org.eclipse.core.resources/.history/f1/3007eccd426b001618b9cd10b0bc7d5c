@@ -1,0 +1,22 @@
+package com.wilsongateway.DuoPaint;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+
+import javax.swing.JMenuItem;
+
+public class ColorMenuItem extends JMenuItem{
+
+	private Color c;
+	
+	ColorMenuItem(Color c){
+		super();
+		this.c = c;
+	}
+	
+	public void paintComponent(Graphics g){
+		g.setColor(c);
+		Dimension size = this.getSize();
+		g.fillRect(0, 0, size.width, size.height);
+	}
+}

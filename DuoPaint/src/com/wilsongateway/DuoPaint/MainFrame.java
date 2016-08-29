@@ -8,14 +8,19 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.util.ArrayList;
+import java.util.Stack;
 
 import javax.swing.Icon;
+import javax.swing.JColorChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 public class MainFrame {
 	
@@ -33,9 +38,12 @@ public class MainFrame {
 	private static Color currentColor = Color.BLACK;
 	private Color[] defaultColors = new Color[]{Color.BLACK, Color.BLUE, Color.RED, Color.GREEN};
 	private ArrayList<Color> customColors = new ArrayList<Color>();
+	private JMenu colorMenu;
+	private JFrame colorFrame;
+	private JColorChooser chooser;
 	
 	public MainFrame(){
-		main = new JFrame("Remote Painter");
+		main = new JFrame("DuoPaint");
 		
 		//Initiating MenuBar elements
 		JMenuBar menu = new JMenuBar();
@@ -55,19 +63,24 @@ public class MainFrame {
 		
 		//TODO add dividers
 		
-		//ColorBar Elements
-		for(Color c : defaultColors){
-			ColorMenuItem colorButton = new ColorMenuItem(c);
-			colorButton.addActionListener(new ActionListener(){
+		colorMenu = new JMenu("Colors");
+		menu.add(colorMenu);
+		
+		populateColorBar();
+		
+		chooser = new JColorChooser();
+		chooser.getSelectionModel().addChangeListener(new ChangeListener(){
 
-				@Override
-				public void actionPerformed(ActionEvent arg0) {
-					currentColor = c;
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				if(currentColor != chooser.getColor()){
+					currentColor = chooser.getColor();
+					customColors.add(chooser.getColor());
+					populateColorBar();
 				}
-				
-			});
-			menu.add(colorButton);
-		}
+			}
+			
+		});
 		
 		//Adding ActionListeners
 		connectMenuItem.addActionListener(new ActionListener(){
@@ -147,6 +160,66 @@ public class MainFrame {
 		startServerThread();
 	}
 	
+	private void populateColorBar() {
+		colorMenu.removeAll();
+		//ColorBar Elements
+		for(Color c : defaultColors){
+			ColorMenuItem colorButton = new ColorMenuItem(c);
+			colorButton.setPreferredSize(new Dimension(colorMenu.getPreferredSize().width,colorMenu.getPreferredSize().height));
+			colorButton.addActionListener(new ActionListener(){
+
+				@Override
+				public void actionPerformed(ActionEvent arg0) {
+					currentColor = c;
+				}
+				
+			});
+			colorMenu.add(colorButton);
+		}
+		
+		colorMenu.addSeparator();
+		colorMenu.addSeparator();
+		colorMenu.addSeparator();
+		
+		//Limiting CustomColor size
+		if(customColors.size() > 5){
+			customColors.remove(0);
+		}
+		
+		for(Color c : customColors){
+			ColorMenuItem colorButton = new ColorMenuItem(c);
+			colorButton.setPreferredSize(new Dimension(colorMenu.getPreferredSize().width,colorMenu.getPreferredSize().height));
+			colorButton.addActionListener(new ActionListener(){
+
+				@Override
+				public void actionPerformed(ActionEvent arg0) {
+					currentColor = c;
+				}
+				
+			});
+			colorMenu.add(colorButton);
+		}
+		
+		JMenuItem addColors = new JMenuItem("More...");
+		addColors.addActionListener(new ActionListener(){
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) {
+				colorFrame = new JFrame();
+				
+				colorFrame.add(chooser);
+				chooser.setColor(currentColor);
+				
+				colorFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+				colorFrame.pack();
+				colorFrame.setLocationRelativeTo(main);
+				colorFrame.setVisible(true);
+			}
+			
+		});
+		colorMenu.add(addColors);
+	}
+
 	/**
 	 * 
 	 * Takes in two sets of points and draws a line connecting them in the right color and then
@@ -163,7 +236,7 @@ public class MainFrame {
 			}
 		}
 	}
-	
+
 	/**
 	 * Clears the canvas and calls sendClear for each connection.
 	 */

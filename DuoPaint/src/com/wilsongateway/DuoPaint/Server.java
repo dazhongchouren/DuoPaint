@@ -18,7 +18,7 @@ public class Server implements Runnable{
 	@Override
 	public void run(){
 		connections = new ArrayList<Connection>();
-		System.out.println("thread started");
+		System.out.println("Server thread started");
 		serverRunning = true;
 		try {
 			ServerSocket server = new ServerSocket(0);
